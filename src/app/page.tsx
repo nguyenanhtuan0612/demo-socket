@@ -1,95 +1,161 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client';
+import React, { useState, useEffect } from 'react';
+import { keySocket, socket } from './socket';
+import { qs } from './question';
+import ReactJson from 'react-json-view';
 
-export default function Home() {
+export default function App() {
+  const [isConnected, setIsConnected] = useState(false);
+  const [roomName, setRoomName] = useState('');
+  const [joinRoomName, setJoinRoomName] = useState('Chưa có');
+  const [userOne, setUserOne] = useState({ id: '', name: 'Chưa có', ready: false, point: 0 });
+  const [userTwo, setUserTwo] = useState({ id: '', name: 'Chưa có', ready: false, point: 0 });
+  const [userName, setUserName] = useState('');
+  const [roomId, setRoomId] = useState('');
+  const [joinRoomId, setJoinRoomId] = useState('');
+  const [playing, setPlaying] = useState('Đang chờ');
+  const [qsObject, setQsObject] = useState({});
+  const [ownerRoom, setOwnerRoom] = useState(false);
+
+  useEffect(() => {
+    setIsConnected(socket.connected);
+    //socket.connect() - Cái này sau này sẽ connect tùy màn :)
+
+    socket.on(keySocket.CREATE_ROOM, data => {
+      if (data.status == 'success') {
+        setRoomId(data.room.id);
+        setJoinRoomName(data.room.room);
+        setUserOne(data.room.playerList[0]);
+        setOwnerRoom(true);
+      }
+    });
+
+    socket.on(keySocket.PLAY, () => {
+      setPlaying('Đang tạo câu hỏi...');
+    });
+
+    socket.on(keySocket.READY, data => {
+      if (data.status == 'success') {
+        setUserOne(data.room.playerList[0]);
+        setUserTwo(data.room.playerList[1]);
+      }
+    });
+
+    socket.on(keySocket.INCREASE_POINT, data => {
+      if (data.status == 'success') {
+        setUserOne(data.room.playerList[0]);
+        setUserTwo(data.room.playerList[1]);
+      }
+    });
+
+    socket.on(keySocket.QUESTION, data => {
+      setPlaying('Đang chơi');
+      setQsObject(data.room.qs);
+    });
+
+    socket.on(keySocket.LEAVE_ROOM, data => {
+      if (data.status == 'success' && joinRoomName != 'Chưa có') {
+        if (data.room.playerList.length == 1) {
+          setUserOne(data.room.playerList[0]);
+          setUserTwo({ id: '', name: 'Chưa có', ready: false, point: 0 });
+        } else {
+          setUserOne({ id: '', name: 'Chưa có', ready: false, point: 0 });
+          setUserTwo({ id: '', name: 'Chưa có', ready: false, point: 0 });
+        }
+      }
+    });
+
+    socket.on(keySocket.JOIN_ROOM, data => {
+      console.log(data);
+      if (data.status == 'success') {
+        setRoomId(data.room.id);
+        setJoinRoomName(data.room.room);
+        setUserOne(data.room.playerList[0]);
+        setUserTwo(data.room.playerList[1]);
+      }
+    });
+
+    return () => {};
+  }, [roomId, joinRoomName]);
+
+  function createRoom() {
+    if (!roomName) {
+      return;
+    }
+    socket.emit(keySocket.CREATE_ROOM, { roomName, userName });
+  }
+
+  function onReady() {
+    if (!roomId) {
+      return;
+    }
+    socket.emit(keySocket.READY, { userName, roomId });
+  }
+
+  function onLeaveRoom() {
+    setRoomName('');
+    setJoinRoomId('');
+    setJoinRoomName('Chưa có');
+    setUserOne({ id: '', name: 'Chưa có', ready: false, point: 0 });
+    setUserTwo({ id: '', name: 'Chưa có', ready: false, point: 0 });
+    setOwnerRoom(false);
+    socket.emit(keySocket.LEAVE_ROOM, { roomId });
+  }
+
+  function play() {
+    socket.emit(keySocket.PLAY, { roomId });
+    //Tạo câu hỏi chỗ này :) call api các kiểu :))
+    // qs = await callAPI();
+    socket.emit(keySocket.QUESTION, { roomId, question: qs });
+  }
+
+  function increasePoint() {
+    socket.emit(keySocket.INCREASE_POINT, { roomId });
+  }
+
+  function onJoinRoom() {
+    if (!joinRoomId) {
+      return;
+    }
+    socket.emit(keySocket.JOIN_ROOM, { roomId: joinRoomId, userName });
+  }
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+    <div className="App">
+      <div>{isConnected ? 'Connected' : 'Disconnected'}</div>
+      <br />
+      <div>{'Tên user'}</div>
+      <input value={userName} onChange={e => setUserName(e.target.value)} />
+      <div></div>
+      <br />
+      <div>{'Tên room'}</div>
+      <input value={roomName} onChange={e => setRoomName(e.target.value)} />
+      <button onClick={createRoom} disabled={userName == '' || roomName == '' || joinRoomName != 'Chưa có'}>
+        Tạo room
+      </button>
+      <div></div>
+      <br />
+      <div>{'Id room'}</div>
+      <input value={joinRoomId} onChange={e => setJoinRoomId(e.target.value)} />
+      <button onClick={onJoinRoom} disabled={joinRoomId == '' || userName == '' || joinRoomName != 'Chưa có'}>
+        Vào phòng
+      </button>
+      <div></div>
+      <br />
+      <div>{'Room Info'}</div>
+      <div>{`Tên room đã vào: ${joinRoomName}, roomId: ${roomId}`}</div>
+      <div>{`Người chơi 1: ${userOne.name}, trạng thái: ${userOne.ready}, điểm: ${userOne.point}`}</div>
+      <div>{`Người chơi 2: ${userTwo.name}, trạng thái: ${userTwo.ready}, điểm: ${userTwo.point}`}</div>
+      <div>{`Trạng thái phòng: ${playing}`}</div>
+      <button onClick={onReady}>Sẵn sàng</button>
+      <button onClick={play} disabled={!userOne.ready || !userTwo.ready || !ownerRoom}>
+        Chơi
+      </button>
+      <button onClick={increasePoint}>Tăng điểm</button>
+      <button onClick={onLeaveRoom}>Rời phòng</button>
+      <div></div>
+      <br />
+      <ReactJson src={qsObject} />
     </div>
   );
 }
