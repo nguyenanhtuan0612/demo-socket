@@ -1,10 +1,10 @@
 import { io } from 'socket.io-client';
 
 // "undefined" means the URL will be computed from the `window.location` object
-const URL = process.env.NODE_ENV === 'production' ? undefined : 'http://localhost:3030';
+const URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3030';
 
 export const socket = io(URL, {
-  //autoConnect: false - Cái này sau tùy màn sẽ phải bật lên
+  autoConnect: false, // false means the connection will be delayed until we call socket.connect()
 });
 
 export const keySocket = {

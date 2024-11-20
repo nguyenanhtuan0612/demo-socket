@@ -18,7 +18,14 @@ export default function App() {
   const [ownerRoom, setOwnerRoom] = useState(false);
 
   useEffect(() => {
-    setIsConnected(socket.connected);
+    socket.connect();
+  }, []);
+
+  useEffect(() => {
+    socket.on('connect', () => {
+      setIsConnected(socket.connected);
+    });
+
     //socket.connect() - Cái này sau này sẽ connect tùy màn :)
 
     socket.on(keySocket.CREATE_ROOM, data => {
