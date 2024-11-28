@@ -8,6 +8,8 @@ export default function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [roomName, setRoomName] = useState('');
   const [joinRoomName, setJoinRoomName] = useState('Chưa có');
+  // room - { id: str room: str, playerList: user[] }
+  // user - { id: '', name: 'Chưa có', ready: false, point: 0 }
   const [userOne, setUserOne] = useState({ id: '', name: 'Chưa có', ready: false, point: 0 });
   const [userTwo, setUserTwo] = useState({ id: '', name: 'Chưa có', ready: false, point: 0 });
   const [userName, setUserName] = useState('');
@@ -49,6 +51,7 @@ export default function App() {
     });
 
     socket.on(keySocket.INCREASE_POINT, data => {
+      console.log(data);
       if (data.status == 'success') {
         setUserOne(data.room.playerList[0]);
         setUserTwo(data.room.playerList[1]);
