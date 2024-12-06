@@ -65,6 +65,7 @@ export default function App() {
 
     socket.on(keySocket.LEAVE_ROOM, data => {
       if (data.status == 'success' && joinRoomName != 'Chưa có') {
+        setJoinRoomId('');
         if (data.room.playerList.length == 1) {
           setUserOne(data.room.playerList[0]);
           setUserTwo({ id: '', name: 'Chưa có', ready: false, point: 0 });
@@ -82,6 +83,25 @@ export default function App() {
         setJoinRoomName(data.room.room);
         setUserOne(data.room.playerList[0]);
         setUserTwo(data.room.playerList[1]);
+      }
+    });
+
+    socket.on(keySocket.MATCH_FOUND, data => {
+      console.log(data);
+      console.log(socket.id);
+      if (data.status == 'success') {
+        setRoomId(data.room.id);
+        setJoinRoomName(data.room.room);
+        setUserOne(data.room.playerList[0]);
+        setUserTwo(data.room.playerList[1]);
+
+        if (socket.id == data.room.playerList[0].id) {
+          setOwnerRoom(true);
+          socket.emit(keySocket.PLAY, { roomId: data.room.id });
+          //Tạo câu hỏi chỗ này :) call api các kiểu :))
+          // qs = await callAPI();
+          socket.emit(keySocket.QUESTION, { roomId: data.room.id, question: qs });
+        }
       }
     });
 
@@ -130,6 +150,16 @@ export default function App() {
     socket.emit(keySocket.JOIN_ROOM, { roomId: joinRoomId, userName });
   }
 
+  function onFindRoom() {
+    socket.emit(keySocket.FIND_ROOM, { userName });
+    setPlaying('Đang tìm phòng...');
+  }
+
+  function onCancelFindRoom() {
+    socket.emit(keySocket.CANCEL_FIND_ROOM, { userName });
+    setPlaying('Đang chờ');
+  }
+
   return (
     <div className="App">
       <div>{isConnected ? 'Connected' : 'Disconnected'}</div>
@@ -163,6 +193,14 @@ export default function App() {
       </button>
       <button onClick={increasePoint}>Tăng điểm</button>
       <button onClick={onLeaveRoom}>Rời phòng</button>
+      <div></div>
+      <br />
+      <button onClick={onFindRoom} disabled={userName == '' || joinRoomName != 'Chưa có' || playing == 'Đang tìm phòng...'}>
+        Tìm ngẫu nhiên
+      </button>
+      <button onClick={onCancelFindRoom} disabled={playing != 'Đang tìm phòng...' || joinRoomName != 'Chưa có'}>
+        Hủy
+      </button>
       <div></div>
       <br />
       <ReactJson src={qsObject} />
